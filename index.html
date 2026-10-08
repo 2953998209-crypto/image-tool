@@ -13,7 +13,7 @@
       <span class="logo">🖼️</span>
       <div>
         <h1>智能图片处理工具</h1>
-        <p class="sub">文字提取 · 文字修改 · 自由替换图中任意事物（不改原图）</p>
+        <p class="sub">文字提取 · 文字修改 · 物体替换 · 去水印（均不改原图）</p>
       </div>
     </div>
     <button id="openSettings" class="btn ghost">⚙️ AI 设置</button>
@@ -41,6 +41,7 @@
         <button class="tab active" data-tab="ocr">① 文字提取</button>
         <button class="tab" data-tab="edit">② 文字修改</button>
         <button class="tab" data-tab="replace">③ 物体替换</button>
+        <button class="tab" data-tab="wmPanel">🧽 去水印</button>
       </div>
 
       <div class="stage-wrap">
@@ -57,7 +58,7 @@
   <div class="modal" id="settingsModal" hidden>
     <div class="modal-card">
       <div class="modal-head">
-        <h3>AI 设置（用于“物体替换 / AI 修复背景”，可选）</h3>
+        <h3>AI 设置（用于“物体替换 / AI 修复背景 / 去水印”，可选）</h3>
         <button class="btn ghost small" id="closeSettings">✕</button>
       </div>
       <p class="note">密钥仅保存在本机浏览器（localStorage），并在请求时通过本站后端转发给对应厂商，不会持久化到服务器。不使用 AI 功能时（文字提取、基础文字修改）无需填写。</p>
