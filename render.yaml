@@ -1,0 +1,12 @@
+# Render 部署配置
+# 在 Render 新建 Web Service → 连接此仓库 → 选此文件即可。
+# 注意：Render 的 Web Service 目前为付费(Starter)套餐；若需免费方案可用 Railway / Fly.io 免费额度。
+services:
+  - type: web
+    name: image-tool
+    runtime: node
+    plan: free
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
