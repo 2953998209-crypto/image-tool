@@ -1,0 +1,12 @@
+{
+  "name": "image-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "智能图片处理工具：文字提取 / 文字修改 / 物体替换",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
