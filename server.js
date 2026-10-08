@@ -5,7 +5,7 @@ const path = require('path');
 const { URL } = require('url');
 
 const PORT = process.env.PORT || 3000;
-const PUBLIC = path.join(__dirname, 'public');
+const PUBLIC = __dirname; // 站点文件位于仓库根目录（与 GitHub Pages 保持一致）
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
