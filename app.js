@@ -22,7 +22,7 @@
   function cache() {
     ['file','drop','uploadActions','fileName','changeImg','stageCard','canvasBox',
      'stage','overlay','side','openSettings','settingsModal','closeSettings','saveSettings',
-     'setProvider','setKey','setModel','setSize','setMode'].forEach(id => el[id] = $(id));
+     'setProvider','setKey','setModel','setSize','setMode','wmBrush','wmClear','wmPrompt','wmRun','wmStatus','wmResultBox','wmDownloadRow','wmDownload'].forEach(id => el[id] = $(id));
   }
 
   const stage = () => el.stage;
@@ -98,7 +98,7 @@
     octx.clearRect(0, 0, state.dispW, state.dispH);
     // 切换 tab 时清除 overlay 上可能残留的事件
     ov.onclick = null; ov.onpointerdown = null; ov.onpointermove = null; ov.onpointerup = null; ov.onpointerleave = null;
-    ov.style.opacity = (tab === 'replace') ? '0.55' : '1';
+    ov.style.opacity = (tab === 'replace' || tab === 'wmPanel') ? '0.55' : '1';
     ov.style.pointerEvents = (tab === 'ocr') ? 'none' : 'auto';
     drawStage();
     renderSidebar();
@@ -152,6 +152,7 @@
     if (state.tab === 'ocr') s.appendChild(ocrPanel());
     else if (state.tab === 'edit') s.appendChild(editPanel());
     else if (state.tab === 'replace') s.appendChild(replacePanel());
+    else if (state.tab === 'wmPanel') s.appendChild(wmPanel());
   }
 
   function statusEl(id) { const d = document.createElement('div'); d.id = id; d.className = 'status'; d.textContent = '就绪'; return d; }
@@ -393,17 +394,7 @@
       $('doInpaint').onclick = doInpaint;
       $('doPaste').onclick = doPaste;
       $('prompt').value = 'a red sports car, photorealistic';
-      let drawing = false;
-      const paint = (e) => {
-        const { x, y } = toCanvasXY(ov, e);
-        const o = ov.getContext('2d');
-        o.fillStyle = 'rgba(255,60,90,.55)';
-        o.beginPath(); o.arc(x, y, state.brush / 2, 0, Math.PI * 2); o.fill();
-      };
-      ov.onpointerdown = (e) => { drawing = true; ov.setPointerCapture(e.pointerId); paint(e); };
-      ov.onpointermove = (e) => { if (drawing) paint(e); };
-      ov.onpointerup = () => { drawing = false; };
-      ov.onpointerleave = () => { drawing = false; };
+      attachBrush($('brush'));
     }, 0);
     return wrap;
   }
@@ -433,25 +424,28 @@
     return c.toDataURL('image/png');
   }
 
-  async function doInpaint() {
-    const prompt = $('prompt') ? $('prompt').value.trim() : '';
-    if (!prompt) { flash($('repStatus'), '请填写替换描述', 'err'); return; }
+  async function runInpaint(prompt, statusEl, resultBox, downloadRow, downloadLink, downloadName) {
+    if (!prompt) { flash(statusEl, '请填写描述', 'err'); return; }
     const s = loadSettings();
-    if (!s.apiKey) { flash($('repStatus'), '未配置 API Key，请在右上角“AI 设置”中填写', 'err'); return; }
+    if (!s.apiKey) { flash(statusEl, '未配置 API Key，请在右上角“AI 设置”中填写', 'err'); return; }
     const invert = s.provider === 'stability';
     const mask = buildMaskFromOverlay(invert);
     const imgData = stage().toDataURL('image/png');
-    flash($('repStatus'), 'AI 正在重绘，请稍候…', 'busy');
+    flash(statusEl, 'AI 正在重绘，请稍候…', 'busy');
     try {
       const out = await callInpaint({
         provider: s.provider, apiKey: s.apiKey, model: s.model, size: s.size,
         prompt, image: imgData, mask
       });
-      showResult(out);
-      flash($('repStatus'), '重绘完成', 'ok');
+      showResultInto(out, resultBox, downloadRow, downloadLink, downloadName);
+      flash(statusEl, '重绘完成', 'ok');
     } catch (e) {
-      flash($('repStatus'), '重绘失败：' + e.message, 'err');
+      flash(statusEl, '重绘失败：' + e.message, 'err');
     }
+  }
+  function doInpaint() {
+    const prompt = $('prompt') ? $('prompt').value.trim() : '';
+    runInpaint(prompt, $('repStatus'), $('resultBox'), $('repDownloadRow'), $('downloadResult'), 'replace_' + state.fileName.replace(/\.[^.]+$/, '') + '.png');
   }
 
   // 贴图替换（无需密钥）：把上传的 PNG 缩放到遮罩包围盒内贴入
@@ -483,15 +477,68 @@
     reader.readAsDataURL(inp.files[0]);
   }
 
-  function showResult(dataUrl) {
-    const box = $('resultBox');
+  function showResultInto(dataUrl, box, row, link, name) {
     if (!box) return;
     box.innerHTML = '';
     const im = new Image();
     im.src = dataUrl;
     box.appendChild(im);
-    const row = $('repDownloadRow');
-    if (row) { row.style.display = 'flex'; $('downloadResult').onclick = () => triggerDownload(dataUrl, 'replace_' + state.fileName.replace(/\.[^.]+$/, '') + '.png'); }
+    if (row) { row.style.display = 'flex'; link.onclick = () => triggerDownload(dataUrl, name || 'result.png'); }
+  }
+  function showResult(dataUrl) {
+    showResultInto(dataUrl, $('resultBox'), $('repDownloadRow'), $('downloadResult'), 'replace_' + state.fileName.replace(/\.[^.]+$/, '') + '.png');
+  }
+
+  // 通用画笔：在当前 overlay 上涂抹遮罩（红），大小由 brushInput 控制
+  function attachBrush(brushInput) {
+    const ov = overlay();
+    let drawing = false;
+    const paint = (e) => {
+      const { x, y } = toCanvasXY(ov, e);
+      const o = ov.getContext('2d');
+      o.fillStyle = 'rgba(255,60,90,.55)';
+      o.beginPath(); o.arc(x, y, Math.max(3, parseInt(brushInput.value, 10) / 2), 0, Math.PI * 2); o.fill();
+    };
+    ov.onpointerdown = (e) => { drawing = true; ov.setPointerCapture(e.pointerId); paint(e); };
+    ov.onpointermove = (e) => { if (drawing) paint(e); };
+    ov.onpointerup = () => { drawing = false; };
+    ov.onpointerleave = () => { drawing = false; };
+  }
+
+  function wmPanel() {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <h3>🧽 去水印</h3>
+      <p class="muted">用画笔涂抹水印 / LOGO / 多余文字区域，AI 会将其无缝抹除并补全背景。需 AI Key。</p>
+      <div class="brush-row" style="margin-top:8px">
+        <span class="muted">画笔</span>
+        <input type="range" id="wmBrush" min="6" max="120" value="36" />
+        <button class="btn small" id="wmClear">清空涂抹</button>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>补充描述（可选，英文更佳）</label>
+        <textarea id="wmPrompt" placeholder="例如：keep the original background texture, no trace left"></textarea>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="wmRun">✨ AI 去水印</button>
+      </div>
+      <div class="status" id="wmStatus" style="margin-top:10px">就绪</div>
+      <div class="result-box" id="wmResultBox"></div>
+      <div class="row" id="wmDownloadRow" style="display:none;margin-top:8px">
+        <button class="btn primary" id="wmDownload">下载去水印结果</button>
+      </div>
+    `;
+    setTimeout(() => {
+      const ov = overlay();
+      $('wmClear').onclick = () => { const o = ov.getContext('2d'); o.clearRect(0, 0, ov.width, ov.height); };
+      $('wmRun').onclick = wmRun;
+      attachBrush($('wmBrush'));
+    }, 0);
+    return wrap;
+  }
+  function wmRun() {
+    const prompt = ($('wmPrompt').value.trim()) || 'remove the watermark and text seamlessly, keep the background natural and unchanged';
+    runInpaint(prompt, $('wmStatus'), $('wmResultBox'), $('wmDownloadRow'), $('wmDownload'), 'watermark_removed_' + state.fileName.replace(/\.[^.]+$/, '') + '.png');
   }
 
   // ---------- AI 调用 ----------
