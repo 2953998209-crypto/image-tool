@@ -1,6 +1,6 @@
 # 纯静态部署（Netlify / 任何静态托管）
-# 说明：本配置只发布 public/ 目录，适用于“浏览器直连 AI”模式。
+# 说明：本配置发布仓库根目录，适用于“浏览器直连 AI”模式。
 # OCR、文字修改（基础）、贴图替换均无需后端即可使用。
 [build]
-  publish = "public"
+  publish = "."
   command = "echo static"
