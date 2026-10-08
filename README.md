@@ -27,7 +27,7 @@ npm start            # 启动后访问 http://localhost:3000
 ## 部署（获取长期稳定网址）
 
 ### 方式 A：纯静态（最简单，30 秒，推荐先试）
-把 `public/` 整个文件夹拖到 https://app.netlify.com/drop 即可获得稳定网址。
+把仓库根目录（含 `index.html` 的目录）拖到 https://app.netlify.com/drop 即可获得稳定网址。
 之后在站内「⚙️ AI 设置 → 调用方式」选择 **浏览器直连 AI**，即可使用 AI 功能（需自备 Key）。
 
 也适用于 GitHub Pages / Vercel 静态托管（`netlify.toml` 已包含）。
@@ -43,10 +43,9 @@ npm start            # 启动后访问 http://localhost:3000
 ```
 image-tool/
 ├─ server.js          # 零依赖 Node 服务：托管静态文件 + /api/inpaint AI 代理
-├─ public/
-│  ├─ index.html
-│  ├─ styles.css
-│  └─ app.js          # 前端逻辑（OCR / 文字修改 / 物体替换）
+├─ index.html         # 前端页面
+├─ styles.css
+├─ app.js             # 前端逻辑（OCR / 文字修改 / 物体替换）
 ├─ netlify.toml
 └─ package.json
 ```
